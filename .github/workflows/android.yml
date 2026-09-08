@@ -24,7 +24,7 @@ jobs:
         uses: cachix/install-nix-action@v30
 
       - name: Build ffmpeg-kit-next Android AAR (openssl, all ABIs)
-        run: ./nix-android.sh -p android-r27d --enable-openssl --enable-libsvtav1
+        run: ./nix-android.sh -p android-r27d --enable-openssl --enable-libsvtav1 --enable-dav1d --enable-android-media-codec
 
       - name: Surface build.log on failure
         if: failure()
