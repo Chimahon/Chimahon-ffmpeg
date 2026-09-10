@@ -23,7 +23,21 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v30
 
+      - name: Check if this version is already published
+        id: published
+        run: |
+          set -euo pipefail
+          VER="$(sed -n 's/.*#define FFMPEG_KIT_VERSION "\([^"]*\)".*/\1/p' android/ffmpeg-kit-next-android-lib/src/main/cpp/ffmpegkit.h)"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          if [ -d "maven-repo/com/github/sohilsayed/Chimahon-ffmpeg/${VER}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "AAR for $VER already present in tree, skipping rebuild"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build ffmpeg-kit-next Android AAR (openssl, all ABIs)
+        if: github.event_name == 'workflow_dispatch' || steps.published.outputs.present != 'true'
         run: ./nix-android.sh -p android-r27d --enable-openssl --enable-libsvtav1 --enable-dav1d --enable-android-media-codec
 
       - name: Surface build.log on failure
@@ -44,6 +58,7 @@ jobs:
           tail -n 60 build.log
 
       - name: Report artifact sizes
+        if: github.event_name == 'workflow_dispatch' || steps.published.outputs.present != 'true'
         run: |
           set -euo pipefail
           AAR=$(find prebuilt/bundle-android-aar-*-maven -name '*.aar' | head -1)
@@ -63,10 +78,11 @@ jobs:
           rm -rf "$TMP"
 
       - name: Prepare JitPack maven repo
+        if: github.event_name == 'workflow_dispatch' || steps.published.outputs.present != 'true'
         run: bash .github/scripts/prepare_jitpack_maven_repo.sh
 
       - name: Commit artifacts to main
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        if: github.event_name == 'workflow_dispatch' || (startsWith(github.ref, 'refs/tags/') && steps.published.outputs.present != 'true')
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -79,7 +95,29 @@ jobs:
             git push origin "HEAD:main"
           fi
 
+      - name: Move version tag onto published AAR
+        if: startsWith(github.ref, 'refs/tags/') && steps.published.outputs.present != 'true'
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$(git rev-parse "$TAG")" = "$(git rev-parse HEAD)" ]; then
+            echo "Tag $TAG already points at HEAD, nothing to do"
+            exit 0
+          fi
+          git tag -f "$TAG"
+          git push -f origin "refs/tags/$TAG"
+
+      - name: Warm JitPack for new version
+        if: startsWith(github.ref, 'refs/tags/') && steps.published.outputs.present != 'true'
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          curl -sSL --max-time 300 "https://jitpack.io/com/github/sohilsayed/Chimahon-ffmpeg/${TAG}/build.log" -o /tmp/jitpack-warm.log || true
+          tail -c 2000 /tmp/jitpack-warm.log || true
+
       - name: Upload AAR artifact
+        if: github.event_name == 'workflow_dispatch' || steps.published.outputs.present != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ffmpeg-kit-next-android
