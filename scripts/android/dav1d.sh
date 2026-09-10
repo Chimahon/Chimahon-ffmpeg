@@ -14,7 +14,7 @@ rm -rf "${BUILD_DIR}" || return 1
   --buildtype=release \
   -Db_lto=false \
   -Db_ndebug=if-release \
-  -Denable_asm=false \
+  -Denable_asm=true \
   -Denable_tools=false \
   -Denable_examples=false \
   -Denable_tests=false || return 1
