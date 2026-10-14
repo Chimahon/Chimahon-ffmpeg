@@ -71,6 +71,7 @@ jobs:
           for d in "$TMP"/jni/*/; do
             abi=$(basename "$d")
             echo "== $abi =="
+            grep -a -q 'force_mpegts' "$d/libavformat.so" || { echo "ERROR: missing force_mpegts in $abi" >&2; exit 1; }
             (cd "$d" && ls -la . | awk 'NR>3 {printf "  %s: %d bytes\n", $9, $5}')
             echo ""
           done

@@ -1,0 +1,35 @@
+diff --git a/libavformat/hls.c b/libavformat/hls.c
+--- a/libavformat/hls.c
++++ b/libavformat/hls.c
+@@ -225,6 +225,7 @@ typedef struct HLSContext {
+     AVDictionary *seg_format_opts;
+     char *allowed_extensions;
+     char *allowed_segment_extensions;
+     int extension_picky;
++    int force_mpegts;
+     int max_reload;
+     int http_persistent;
+@@ -2333,7 +2334,12 @@ static int hls_read_header(AVFormatContext *s)
+             pls->ctx->max_analyze_duration = s->max_analyze_duration > 0 ? s->max_analyze_duration : 4 * AV_TIME_BASE;
+             pls->ctx->interrupt_callback = s->interrupt_callback;
+             url = av_strdup(pls->segments[0]->url);
+-            ret = av_probe_input_buffer(&pls->pb.pub, &in_fmt, url, NULL, 0, 0);
++            if (c->force_mpegts && seg && !seg->init_section) {
++                in_fmt = av_find_input_format("mpegts");
++                ret = in_fmt ? 0 : AVERROR_DEMUXER_NOT_FOUND;
++            } else {
++                ret = av_probe_input_buffer(&pls->pb.pub, &in_fmt, url, NULL, 0, 0);
++            }
+-
++
+             for (int n = 0; n < pls->n_segments; n++)
+                 if (ret >= 0)
+@@ -2811,6 +2817,8 @@ static const AVOption hls_options[] = {
+     {"live_start_index", "segment index to start live streams at (negative values are from the end)",
+         OFFSET(live_start_index), AV_OPT_TYPE_INT, {.i64 = -3}, INT_MIN, INT_MAX, FLAGS},
+     {"prefer_x_start", "prefer to use #EXT-X-START if it's in playlist instead of live_start_index",
+         OFFSET(prefer_x_start), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, FLAGS},
++    {"force_mpegts", "Force MPEG-TS detection for media segments without an initialization section",
++        OFFSET(force_mpegts), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, FLAGS},
+     {"allowed_extensions", "List of file extensions that hls is allowed to access",
+         OFFSET(allowed_extensions), AV_OPT_TYPE_STRING,

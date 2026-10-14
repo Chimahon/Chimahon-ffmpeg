@@ -420,6 +420,10 @@ git checkout libavformat/hls.c 1>>"${BASEDIR}"/build.log 2>&1
 git checkout libavformat/protocols.c 1>>"${BASEDIR}"/build.log 2>&1
 git checkout libavutil 1>>"${BASEDIR}"/build.log 2>&1
 
+# Extensions use this opt-in HLS option for MPEG-TS segments disguised as images.
+git apply --check "${BASEDIR}/tools/patch/ffmpeg/hls-force-mpegts.patch" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+git apply "${BASEDIR}/tools/patch/ffmpeg/hls-force-mpegts.patch" 1>>"${BASEDIR}"/build.log 2>&1 || return 1
+
 # 1. Use thread local log levels
 ${SED_INLINE} 's/static atomic_int av_log_level/__thread atomic_int av_log_level/g' "${BASEDIR}"/src/"${LIB_NAME}"/libavutil/log.c 1>>"${BASEDIR}"/build.log 2>&1 || return 1
 
