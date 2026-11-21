@@ -38,7 +38,7 @@ jobs:
 
       - name: Build ffmpeg-kit-next Android AAR (openssl, all ABIs)
         if: github.event_name == 'workflow_dispatch' || steps.published.outputs.present != 'true'
-        run: ./nix-android.sh -p android-r27d --enable-openssl --enable-libsvtav1 --enable-dav1d --enable-android-media-codec
+        run: ./nix-android.sh -p android-r27d --enable-openssl --enable-libsvtav1 --enable-dav1d --enable-android-media-codec --enable-libxml2
 
       - name: Surface build.log on failure
         if: failure()
